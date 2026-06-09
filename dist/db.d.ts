@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import "dotenv/config";
 export declare const userModel: mongoose.Model<{
     username: string;
     password: string;

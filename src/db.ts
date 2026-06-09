@@ -1,9 +1,17 @@
-// mongodb+srv://harshmishra2803_db_user:harsh123@synapseai.uuormsx.mongodb.net/
 import mongoose from "mongoose";
 import {model,Schema} from "mongoose";
 import { ref } from "node:process";
+import "dotenv/config";
 
-mongoose.connect("mongodb+srv://harshmishra2803_db_user:harsh123@synapseai.uuormsx.mongodb.net/")
+
+const MONGO_URI = process.env.MONGO_URI;
+mongoose.connect(process.env.MONGO_URI!)
+  .then(() => {
+    console.log("MongoDB Connected");
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 
 
 const userSchema = new Schema({
