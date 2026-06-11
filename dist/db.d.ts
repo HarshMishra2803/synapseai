@@ -67,6 +67,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
 } & mongoose.DefaultTimestampProps, {}, {}, {
     id: string;
@@ -76,6 +77,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
 } & mongoose.DefaultTimestampProps, {
     id: string;
@@ -87,6 +89,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
 } & mongoose.DefaultTimestampProps & {
     _id: mongoose.Types.ObjectId;
@@ -102,6 +105,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
 } & mongoose.DefaultTimestampProps, mongoose.Document<unknown, {}, {
     type: "link" | "tweet" | "youtube" | "document" | "note";
@@ -109,6 +113,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
 } & mongoose.DefaultTimestampProps, {
     id: string;
@@ -120,6 +125,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
 } & mongoose.DefaultTimestampProps & {
     _id: mongoose.Types.ObjectId;
@@ -133,6 +139,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
     createdAt: NativeDate;
     updatedAt: NativeDate;
@@ -146,6 +153,7 @@ export declare const contentModel: mongoose.Model<{
     title: string;
     note: string;
     tags: string[];
+    pinned: boolean;
     userId: mongoose.Types.ObjectId;
     createdAt: NativeDate;
     updatedAt: NativeDate;

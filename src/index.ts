@@ -153,6 +153,99 @@ app.delete("/api/v1/content", userMiddleware, async (req, res) => {
   }
 });
 
+// ── Content: Edit ─────────────────────────────────────────────────────────────
+app.put("/api/v1/content/:id", userMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { title, note, tags } = req.body;
+  // @ts-ignore
+  const userId = req.userId;
+
+  if (!title) return res.status(400).json({ message: "Title is required" });
+
+  try {
+    const updated = await contentModel.findOneAndUpdate(
+      { _id: id, userId },
+      { title, note: note || "", tags: Array.isArray(tags) ? tags : [] },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Content not found or unauthorized" });
+    return res.json({ message: "Content Updated", content: updated });
+  } catch (e) {
+    console.error("Edit content error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── Content: Toggle Pin ───────────────────────────────────────────────────────
+app.patch("/api/v1/content/:id/pin", userMiddleware, async (req, res) => {
+  const { id } = req.params;
+  // @ts-ignore
+  const userId = req.userId;
+
+  try {
+    const item = await contentModel.findOne({ _id: id, userId });
+    if (!item) return res.status(404).json({ message: "Content not found or unauthorized" });
+
+    item.pinned = !item.pinned;
+    await item.save();
+    return res.json({ message: "Pin toggled", pinned: item.pinned, content: item });
+  } catch (e) {
+    console.error("Pin content error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── AI: Summarize ─────────────────────────────────────────────────────────────
+app.post("/api/v1/ai/summarize", userMiddleware, async (req, res) => {
+  const { title, note, link, type } = req.body;
+
+  // If OpenAI key is set, use GPT-4o-mini
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const prompt = `You are a knowledge assistant. Given the following saved content, write a concise 2-3 sentence summary that captures the key takeaway. Be specific and insightful.
+
+Title: ${title}
+Type: ${type || "link"}
+URL: ${link || "N/A"}
+Existing note: ${note || "none"}
+
+Summary:`;
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 150,
+          temperature: 0.7,
+        }),
+      });
+
+      const data = await response.json() as { choices?: { message?: { content?: string } }[] };
+      const summary = data?.choices?.[0]?.message?.content?.trim();
+      if (summary) return res.json({ summary });
+    } catch (e) {
+      console.error("OpenAI error, falling back:", e);
+    }
+  }
+
+  // ── Smart local fallback (no API key needed) ───────────────────────────────
+  const parts: string[] = [];
+  if (title) parts.push(`This is a saved ${type || "link"} titled "${title}".`);
+  if (link)  parts.push(`Source: ${link}.`);
+  if (note && note.length > 10) {
+    const trimmed = note.length > 200 ? note.slice(0, 200) + "…" : note;
+    parts.push(trimmed);
+  } else {
+    parts.push("No additional notes were provided.");
+  }
+  return res.json({ summary: parts.join(" ") });
+});
+
 // ── Brain: Toggle Share ───────────────────────────────────────────────────────
 app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
   const { share } = req.body;

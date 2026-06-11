@@ -25,15 +25,16 @@ export const userModel = model("User", userSchema);
 // ── Content ──────────────────────────────────────────────────────────────────
 const contentSchema = new Schema(
   {
-    title: { type: String, required: true },
-    link: { type: String, default: "" },
+    title:  { type: String, required: true },
+    link:   { type: String, default: "" },
     type: {
       type: String,
       enum: ["tweet", "youtube", "document", "link", "note"],
       default: "link",
     },
-    note: { type: String, default: "" },
-    tags: [{ type: String }],              // plain strings, not ObjectId refs
+    note:   { type: String, default: "" },
+    tags:   [{ type: String }],
+    pinned: { type: Boolean, default: false },
     userId: { type: mongoose.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }

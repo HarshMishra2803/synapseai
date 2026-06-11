@@ -25,7 +25,8 @@ const contentSchema = new Schema({
         default: "link",
     },
     note: { type: String, default: "" },
-    tags: [{ type: String }], // plain strings, not ObjectId refs
+    tags: [{ type: String }],
+    pinned: { type: Boolean, default: false },
     userId: { type: mongoose.Types.ObjectId, ref: "User", required: true },
 }, { timestamps: true });
 export const contentModel = model("Content", contentSchema);
