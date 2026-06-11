@@ -11,7 +11,7 @@
 **A production-ready REST API for the SynapseAI Second Brain application.**  
 Built with Express 5, TypeScript, MongoDB Atlas, and JWT authentication.
 
-[Frontend Repo](../synapseAi-frontend) · [API Reference](#api-reference) · [Report Bug](#)
+[Frontend](https://synapseai-front.vercel.app) · [Frontend Repo](https://github.com/HarshMishra2803/synapseai-front) · [API Reference](#api-reference)
 
 </div>
 
