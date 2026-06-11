@@ -1,37 +1,38 @@
 import mongoose from "mongoose";
 import { model, Schema } from "mongoose";
-import { ref } from "node:process";
 import "dotenv/config";
-const MONGO_URI = process.env.MONGO_URI;
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+    .connect(process.env.MONGO_URI)
     .then(() => {
-    console.log("MongoDB Connected");
+    console.log("✅ MongoDB Connected");
 })
     .catch((err) => {
-    console.log(err);
+    console.error("❌ MongoDB Connection Error:", err);
 });
+// ── User ────────────────────────────────────────────────────────────────────
 const userSchema = new Schema({
-    username: { type: String,
-        unique: true,
-        required: true
-    },
-    password: { type: String,
-        required: true
-    },
-});
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+}, { timestamps: true });
 export const userModel = model("User", userSchema);
+// ── Content ──────────────────────────────────────────────────────────────────
 const contentSchema = new Schema({
-    title: {
+    title: { type: String, required: true },
+    link: { type: String, default: "" },
+    type: {
         type: String,
-        required: true
+        enum: ["tweet", "youtube", "document", "link", "note"],
+        default: "link",
     },
-    link: {
-        type: String,
-    },
-    tags: [{
-            type: mongoose.Types.ObjectId, ref: "Tag"
-        }],
-    userId: { type: mongoose.Types.ObjectId, ref: "User", required: true }
-});
+    note: { type: String, default: "" },
+    tags: [{ type: String }], // plain strings, not ObjectId refs
+    userId: { type: mongoose.Types.ObjectId, ref: "User", required: true },
+}, { timestamps: true });
 export const contentModel = model("Content", contentSchema);
+// ── Link (brain sharing) ─────────────────────────────────────────────────────
+const linkSchema = new Schema({
+    hash: { type: String, required: true, unique: true },
+    userId: { type: mongoose.Types.ObjectId, ref: "User", required: true },
+}, { timestamps: true });
+export const linkModel = model("Link", linkSchema);
 //# sourceMappingURL=db.js.map

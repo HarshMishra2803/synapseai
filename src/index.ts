@@ -1,137 +1,202 @@
-import mongoose from "mongoose";
-import jwt from "jsonwebtoken";
 import express from "express";
-import { contentModel, userModel } from "./db.js";
+import cors from "cors";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { contentModel, linkModel, userModel } from "./db.js";
 import { JWT_PASSWORD } from "./config.js";
 import { userMiddleware } from "./middleware.js";
 
 const app = express();
+
+// ── Middleware ────────────────────────────────────────────────────────────────
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3001"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "authorization"],
+  })
+);
 app.use(express.json());
 
+// ── Health Check ─────────────────────────────────────────────────────────────
+app.get("/api/v1/health", (_req, res) => {
+  res.json({ status: "ok", message: "SynapseAI backend is running 🧠" });
+});
+
+// ── Auth: Signup ──────────────────────────────────────────────────────────────
 app.post("/api/v1/signup", async (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
+  const { username, password } = req.body;
 
-    try {
-        // Check if user already exists
-        const existingUser = await userModel.findOne({
-            username: username
-        });
+  if (!username || username.length < 3) {
+    return res.status(400).json({ message: "Username must be at least 3 characters" });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
 
-        if (existingUser) {
-            return res.status(409).json({
-                message: "Username already exists"
-            });
-        }
-
-        // Create user
-        await userModel.create({
-            username: username,
-            password: password
-        });
-
-        return res.status(201).json({
-            message: "User signed up successfully"
-        });
-
-    } catch (e) {
-        return res.status(500).json({
-            message: "Internal Server Error"
-        });
+  try {
+    const existing = await userModel.findOne({ username });
+    if (existing) {
+      return res.status(409).json({ message: "Username already exists" });
     }
+
+    await userModel.create({ username, password });
+
+    return res.status(201).json({ message: "User signed up successfully" });
+  } catch (e) {
+    console.error("Signup error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
-app.post("/api/v1/signin",async(req,res)=>{
+// ── Auth: Signin ──────────────────────────────────────────────────────────────
+app.post("/api/v1/signin", async (req, res) => {
+  const { username, password } = req.body;
 
-    const username = req.body.username;
-    const password = req.body.password;
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password are required" });
+  }
 
-    try{
+  try {
+    const user = await userModel.findOne({ username, password });
 
-        const existingUser = await userModel.findOne({
-            username,
-            password
-        })
-
-        if(existingUser){
-
-            const token = jwt.sign({
-                id:existingUser._id
-            },JWT_PASSWORD)
-
-            res.json({
-                token
-            })
-        }else{
-            res.status(404).json({
-                message:"Incorrect Credientials"
-            })
-        }
-
-    }catch(e){
-
-        res.status(500).json({
-            message:"Internal Server Error"
-        })
-
+    if (!user) {
+      return res.status(403).json({ message: "Incorrect credentials" });
     }
 
+    const token = jwt.sign({ id: user._id }, JWT_PASSWORD);
 
-})
+    return res.json({ token });
+  } catch (e) {
+    console.error("Signin error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
-app.post("/api/v1/content",userMiddleware,async(req,res)=>{
+// ── Content: Create ───────────────────────────────────────────────────────────
+app.post("/api/v1/content", userMiddleware, async (req, res) => {
+  const { title, link, type, note, tags } = req.body;
 
-    const link = req.body.link;
-    const title = req.body.title;
-   await contentModel.create({
-    link,
-    title,
-    //@ts-ignore
-    userId:req.userId,
-    tags: []
-   })
-   return res.json({
-    message:"Content Created"
-   })
-})
+  if (!title) {
+    return res.status(400).json({ message: "Title is required" });
+  }
 
-app.get("/api/v1/content",userMiddleware,async(req,res)=>{
-    //@ts-ignore
-    const userId = req.userId,
-    const content = await contentModel.find({
-        userId:userId
-    }).populate("userId","username")
+  try {
+    const content = await contentModel.create({
+      title,
+      link: link || "",
+      type: type || "link",
+      note: note || "",
+      tags: Array.isArray(tags) ? tags : [],
+      // @ts-ignore
+      userId: req.userId,
+    });
+
+    return res.status(201).json({ message: "Content Created", content });
+  } catch (e) {
+    console.error("Create content error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── Content: Get All ──────────────────────────────────────────────────────────
+app.get("/api/v1/content", userMiddleware, async (req, res) => {
+  try {
+    // @ts-ignore
+    const userId = req.userId;
+    const content = await contentModel
+      .find({ userId })
+      .populate("userId", "username")
+      .sort({ createdAt: -1 });
+
+    return res.json({ content });
+  } catch (e) {
+    console.error("Get content error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── Content: Delete ───────────────────────────────────────────────────────────
+app.delete("/api/v1/content", userMiddleware, async (req, res) => {
+  const { contentId } = req.body;
+
+  if (!contentId) {
+    return res.status(400).json({ message: "contentId is required" });
+  }
+
+  try {
+    // @ts-ignore
+    const userId = req.userId;
+    const result = await contentModel.deleteOne({ _id: contentId, userId });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Content not found or unauthorized" });
+    }
+
+    return res.json({ message: "Content Deleted" });
+  } catch (e) {
+    console.error("Delete content error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── Brain: Toggle Share ───────────────────────────────────────────────────────
+app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
+  const { share } = req.body;
+  // @ts-ignore
+  const userId = req.userId;
+
+  try {
+    if (share) {
+      // Check if a link already exists for this user
+      let link = await linkModel.findOne({ userId });
+
+      if (!link) {
+        const hash = crypto.randomBytes(16).toString("hex");
+        link = await linkModel.create({ hash, userId });
+      }
+
+      return res.json({ hash: link.hash });
+    } else {
+      // Revoke sharing
+      await linkModel.deleteOne({ userId });
+      return res.json({ message: "Sharing disabled" });
+    }
+  } catch (e) {
+    console.error("Share brain error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── Brain: Get Shared ─────────────────────────────────────────────────────────
+app.get("/api/v1/brain/:shareLink", async (req, res) => {
+  const { shareLink } = req.params;
+
+  try {
+    const link = await linkModel.findOne({ hash: shareLink }).populate("userId", "username");
+
+    if (!link) {
+      return res.status(404).json({ message: "Shared brain not found" });
+    }
+
+    const content = await contentModel
+      .find({ userId: link.userId })
+      .sort({ createdAt: -1 });
+
+    const owner = link.userId as any;
+
     return res.json({
-        content
-    })
+      username: owner?.username || "Unknown",
+      content,
+    });
+  } catch (e) {
+    console.error("Get shared brain error:", e);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
-})
-
-app.delete("/api/v1/content",userMiddleware,async(req,res)=>{
-
-    const contentId = req.body.contentId;
-
-    await contentModel.deleteMany({
-        contentId,
-        //@ts-ignore
-        userId:req.userId
-    })
-
-    return res.json({
-        message:"Content Deleted"
-    }) 
-
-})
-
-app.post("/api/v1/brain/share",(req,res)=>{
-
-})
-
-app.get("/api/v1/brain/:shareLink",(req,res)=>{
-
-})
-
+// ── Start Server ──────────────────────────────────────────────────────────────
 app.listen(3000, () => {
-    console.log("Server running on port 3000");
+  console.log("🚀 SynapseAI server running on http://localhost:3000");
 });
-
