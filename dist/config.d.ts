@@ -1,2 +1,3 @@
-export declare const JWT_PASSWORD = "!231232366!";
+import "dotenv/config";
+export declare const JWT_PASSWORD: string;
 //# sourceMappingURL=config.d.ts.map
