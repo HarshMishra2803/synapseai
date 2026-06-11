@@ -12,19 +12,16 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     : [];
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (curl, Postman, mobile apps)
         if (!origin)
             return callback(null, true);
-        // If no allowlist set, allow all (development / initial deploy)
         if (allowedOrigins.length === 0)
             return callback(null, true);
-        // Check allowlist
         if (allowedOrigins.includes(origin))
             return callback(null, true);
         callback(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "authorization"],
 }));
 app.use(express.json());
@@ -172,10 +169,7 @@ app.patch("/api/v1/content/:id/pin", userMiddleware, async (req, res) => {
 // ── AI: Summarize ─────────────────────────────────────────────────────────────
 app.post("/api/v1/ai/summarize", userMiddleware, async (req, res) => {
     const { title, note, link, type } = req.body;
-    // If OpenAI key is set, use GPT-4o-mini
-    if (process.env.OPENAI_API_KEY) {
-        try {
-            const prompt = `You are a knowledge assistant. Given the following saved content, write a concise 2-3 sentence summary that captures the key takeaway. Be specific and insightful.
+    const prompt = `You are a knowledge assistant. Given the following saved content, write a concise 2-3 sentence summary that captures the key takeaway. Be specific and insightful.
 
 Title: ${title}
 Type: ${type || "link"}
@@ -183,14 +177,17 @@ URL: ${link || "N/A"}
 Existing note: ${note || "none"}
 
 Summary:`;
-            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // ── Try Groq (fast, free tier available) ─────────────────────────────────
+    if (process.env.GROQ_API_KEY) {
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+                    "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
                 },
                 body: JSON.stringify({
-                    model: "gpt-4o-mini",
+                    model: "llama-3.1-8b-instant",
                     messages: [{ role: "user", content: prompt }],
                     max_tokens: 150,
                     temperature: 0.7,
@@ -202,18 +199,37 @@ Summary:`;
                 return res.json({ summary });
         }
         catch (e) {
-            console.error("OpenAI error, falling back:", e);
+            console.error("Groq error, trying Gemini:", e);
         }
     }
-    // ── Smart local fallback (no API key needed) ───────────────────────────────
+    // ── Try Gemini (Google, generous free tier) ───────────────────────────────
+    if (process.env.GEMINI_API_KEY) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 150, temperature: 0.7 },
+                }),
+            });
+            const data = await response.json();
+            const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (summary)
+                return res.json({ summary });
+        }
+        catch (e) {
+            console.error("Gemini error, using fallback:", e);
+        }
+    }
+    // ── Smart local fallback (no API key needed) ──────────────────────────────
     const parts = [];
     if (title)
         parts.push(`This is a saved ${type || "link"} titled "${title}".`);
     if (link)
         parts.push(`Source: ${link}.`);
     if (note && note.length > 10) {
-        const trimmed = note.length > 200 ? note.slice(0, 200) + "…" : note;
-        parts.push(trimmed);
+        parts.push(note.length > 200 ? note.slice(0, 200) + "…" : note);
     }
     else {
         parts.push("No additional notes were provided.");
