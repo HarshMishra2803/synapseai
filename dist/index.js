@@ -8,13 +8,17 @@ import { userMiddleware } from "./middleware.js";
 const app = express();
 // ── Middleware ────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",")
-    : ["http://localhost:5173", "http://localhost:5174"];
+    ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+    : [];
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl, Postman)
+        // Allow requests with no origin (curl, Postman, mobile apps)
         if (!origin)
             return callback(null, true);
+        // If no allowlist set, allow all (development / initial deploy)
+        if (allowedOrigins.length === 0)
+            return callback(null, true);
+        // Check allowlist
         if (allowedOrigins.includes(origin))
             return callback(null, true);
         callback(new Error(`CORS blocked: ${origin}`));
