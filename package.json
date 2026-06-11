@@ -9,22 +9,22 @@
     "dev": "npm run build && npm run start"
   },
   "keywords": [],
-  "author": "",
+  "author": "Harsh Mishra",
   "license": "ISC",
-  "description": "",
+  "description": "SynapseAI — Second Brain REST API",
   "dependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.9.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.6.3"
+    "mongoose": "^9.6.3",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.9.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "ts-node": "^10.9.2"
   }
 }
