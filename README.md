@@ -1,102 +1,160 @@
-<div align="center">
+<h1 align="center">🧠 SynapseAI — Backend API</h1>
+<h3 align="center">The REST API powering SynapseAI's Second Brain platform</h3>
 
-# 🧠 SynapseAI — Backend API
+<p align="center">
+  <a href="https://synapseai-backend-ocgv.onrender.com/api/v1/health"><img src="https://img.shields.io/badge/API_Status-Live-10b981?style=flat-square&logo=render&logoColor=white" /></a>
+  <a href="https://github.com/HarshMishra2803/synapseai/commits/main"><img src="https://img.shields.io/github/last-commit/HarshMishra2803/synapseai?style=flat-square&color=blue" /></a>
+  <img src="https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square" />
+</p>
 
-**A production-ready REST API for the SynapseAI Second Brain application.**
-Built with Express 5, TypeScript, MongoDB Atlas, and JWT authentication.
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Express-5-000000?style=flat-square&logo=express&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" />
+  <img src="https://img.shields.io/badge/Auth-JWT-black?style=flat-square&logo=jsonwebtokens&logoColor=white" />
+</p>
 
-[![Live API](https://img.shields.io/badge/🔗_Live_API-onrender.com-10b981?style=for-the-badge)](https://synapseai-backend-ocgv.onrender.com/api/v1/health)
-[![Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=for-the-badge&logo=render)](https://render.com)
-[![Node](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://typescriptlang.org)
+<p align="center">
+  <a href="https://synapseai-front.vercel.app"><b>Live App</b></a> ·
+  <a href="https://github.com/HarshMishra2803/synapseai-front"><b>Frontend Repo</b></a> ·
+  <a href="#-api-reference"><b>API Docs</b></a>
+</p>
 
-</div>
+<br/>
 
----
+## ⚡ Overview
 
-## ✨ Features
+SynapseAI is a **Second Brain** SaaS — a single place to save YouTube videos, tweets, articles, documents, and notes, tag them, and get AI-generated summaries on demand. This repo is the **backend**: a production REST API handling auth, content storage, AI summarization, and public brain-sharing.
 
-- 🔐 **JWT Authentication** — Stateless auth with token-based sessions
-- 📝 **Full CRUD** — Create, Read, Update, Delete content
-- 📌 **Pin/Favourite** — Toggle pinned status on content items
-- 🤖 **AI Summarization** — Groq (Llama 3.1) + Gemini + local fallback
-- 🔗 **Brain Sharing** — Generate unique public share hashes
-- 🌍 **CORS Configured** — Allowlist-based with environment variable control
-- 🏥 **Health Check** — `/api/v1/health` endpoint for uptime monitoring
+The frontend (React + TypeScript) lives in a [separate repo](https://github.com/HarshMishra2803/synapseai-front) and talks to this API over HTTPS.
 
----
+<br/>
+
+## 🧩 Features
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🔐 JWT Authentication**
+Stateless, token-based sessions — no server-side session storage.
+
+**📝 Full CRUD**
+Create, read, update, delete, and pin content items.
+
+**🤖 AI Summarization**
+Groq (Llama 3.1) primary, with a 3-tier fallback chain: Groq → Gemini → local extraction.
+
+</td>
+<td width="50%" valign="top">
+
+**🔗 Brain Sharing**
+Generate a unique, crypto-based public link to share your whole brain read-only.
+
+**🌍 CORS Allowlisting**
+Environment-variable-driven origin control.
+
+**🏥 Health Endpoint**
+`/api/v1/health` for uptime monitoring.
+
+</td>
+</tr>
+</table>
+
+<br/>
+
+## 🏛️ Architecture
+
+```
+Client (React SPA)
+        │  HTTPS + JWT Bearer token
+        ▼
+Express 5 API (this repo)
+        │
+        ├──► MongoDB Atlas ──► users · content · share-links
+        │
+        └──► AI Fallback Chain
+                 1. Groq (Llama 3.1)  ──► fast, primary
+                 2. Google Gemini     ──► fallback on failure
+                 3. Local extraction  ──► guarantees a response either way
+```
+
+<br/>
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Runtime** | Node.js 18+ | JavaScript server runtime |
-| **Framework** | Express 5 | HTTP server & routing |
-| **Language** | TypeScript 5 | Type safety & better DX |
-| **Database** | MongoDB Atlas | NoSQL cloud database |
-| **ODM** | Mongoose 9 | MongoDB object modeling |
-| **Auth** | JSON Web Tokens (JWT) | Stateless authentication |
-| **AI** | Groq API (Llama 3.1) | AI-powered content summarization |
-| **Deployment** | Render (Free tier) | Cloud hosting with auto-deploy |
+| | |
+|---|---|
+| **Runtime** | Node.js 18+ |
+| **Framework** | Express 5 |
+| **Language** | TypeScript 5 |
+| **Database** | MongoDB Atlas |
+| **ODM** | Mongoose 9 |
+| **Auth** | JSON Web Tokens (JWT) |
+| **AI** | Groq API (Llama 3.1) + Gemini fallback |
+| **Hosting** | Render |
 
----
+<br/>
 
 ## 📁 Project Structure
 
 ```
 src/
-├── index.ts          # Express app, all route definitions, server start
-├── db.ts             # Mongoose connection + all schema/model definitions
-├── middleware.ts     # JWT authentication middleware (userMiddleware)
-└── config.ts         # Environment variable exports (JWT_PASSWORD)
+├── index.ts        # Express app, route definitions, server start
+├── db.ts            # Mongoose connection + schema/model definitions
+├── middleware.ts    # JWT auth middleware
+└── config.ts         # Environment variable exports
 ```
 
----
+<br/>
 
 ## 🔌 API Reference
 
-### Auth
+**Auth**
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/signup` | ❌ | Create new user account |
-| `POST` | `/api/v1/signin` | ❌ | Login and receive JWT token |
+|---|---|:---:|---|
+| `POST` | `/api/v1/signup` | ❌ | Create a new account |
+| `POST` | `/api/v1/signin` | ❌ | Log in, receive JWT |
 
-### Content
+**Content**
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/v1/content` | ✅ | Get all content for authenticated user |
-| `POST` | `/api/v1/content` | ✅ | Save new content item |
-| `PUT` | `/api/v1/content/:id` | ✅ | Edit title, note, tags of content |
+|---|---|:---:|---|
+| `GET` | `/api/v1/content` | ✅ | Get all content for the user |
+| `POST` | `/api/v1/content` | ✅ | Save a new content item |
+| `PUT` | `/api/v1/content/:id` | ✅ | Edit title, note, tags |
 | `PATCH` | `/api/v1/content/:id/pin` | ✅ | Toggle pinned status |
 | `DELETE` | `/api/v1/content` | ✅ | Delete a content item |
 
-### AI
+**AI**
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/ai/summarize` | ✅ | Generate AI summary for content |
+|---|---|:---:|---|
+| `POST` | `/api/v1/ai/summarize` | ✅ | Generate an AI summary |
 
-### Brain Sharing
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/brain/share` | ✅ | Enable/disable brain sharing |
-| `GET` | `/api/v1/brain/:shareLink` | ❌ | Get public shared brain content |
-
-### Health
+**Brain Sharing**
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+|---|---|:---:|---|
+| `POST` | `/api/v1/brain/share` | ✅ | Enable/disable sharing |
+| `GET` | `/api/v1/brain/:shareLink` | ❌ | View a shared brain publicly |
+
+**Health**
+
+| Method | Endpoint | Auth | Description |
+|---|---|:---:|---|
 | `GET` | `/api/v1/health` | ❌ | Server health check |
 
----
+<br/>
 
 ## 📊 Data Models
 
-### User
-```typescript
+<details>
+<summary><b>User</b></summary>
+
+```ts
 {
   _id:       ObjectId,
   username:  string (unique, required),
@@ -105,9 +163,12 @@ src/
   updatedAt: Date
 }
 ```
+</details>
 
-### Content
-```typescript
+<details>
+<summary><b>Content</b></summary>
+
+```ts
 {
   _id:       ObjectId,
   title:     string (required),
@@ -121,9 +182,12 @@ src/
   updatedAt: Date
 }
 ```
+</details>
 
-### Link (Brain Sharing)
-```typescript
+<details>
+<summary><b>Link (Brain Sharing)</b></summary>
+
+```ts
 {
   _id:       ObjectId,
   hash:      string (unique),
@@ -132,76 +196,69 @@ src/
   updatedAt: Date
 }
 ```
+</details>
 
----
+<br/>
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js 18+
-- MongoDB Atlas account (free tier works)
-
-### Local Development
-
 ```bash
-# Clone the repository
 git clone https://github.com/HarshMishra2803/synapseai.git
 cd synapseai
-
-# Install dependencies
 npm install
 
-# Create environment file
 cp .env.example .env
-# Edit .env with your values
+# fill in your values
 
-# Build and start
 npm run dev
 ```
 
-### Environment Variables
-
 | Variable | Required | Description |
-|----------|----------|-------------|
+|---|:---:|---|
 | `MONGO_URI` | ✅ | MongoDB Atlas connection string |
-| `JWT_PASSWORD` | ✅ | Secret key for signing JWT tokens |
-| `ALLOWED_ORIGINS` | ✅ | Comma-separated allowed CORS origins |
+| `JWT_PASSWORD` | ✅ | Secret key for signing JWTs |
+| `ALLOWED_ORIGINS` | ✅ | Comma-separated CORS allowlist |
 | `GROQ_API_KEY` | ⭐ | Groq API key for AI summarization |
-| `GEMINI_API_KEY` | ⭐ | Google Gemini API key (fallback) |
+| `GEMINI_API_KEY` | ⭐ | Gemini API key (fallback) |
 | `PORT` | ❌ | Server port (default: 3000) |
 
----
+<br/>
 
 ## 🔒 Security
 
-- ✅ Passwords stored as plaintext (upgrade path: bcrypt hashing)
-- ✅ JWT tokens — stateless, no session storage needed
-- ✅ All content routes verify token AND ownership (`userId` match)
-- ✅ CORS allowlist via environment variable
-- ✅ API keys server-side only — never exposed to frontend
+- ✅ JWT-based auth — stateless, no session storage
+- ✅ Every content route verifies token **and** resource ownership (`userId` match)
+- ✅ CORS allowlist enforced via environment variable
+- ✅ AI provider keys stay server-side, never exposed to the client
+- 🔧 **Known limitation:** passwords are not yet hashed — bcrypt hashing is the next planned upgrade before any production/real-user rollout
 
----
+<br/>
 
 ## 📦 Scripts
 
 ```bash
 npm run build   # Compile TypeScript → JavaScript (dist/)
-npm start       # Run compiled server (node dist/index.js)
-npm run dev     # Build + start (for local development)
+npm start        # Run compiled server
+npm run dev       # Build + start (local development)
 ```
 
----
+<br/>
 
-## 🌐 Deployment on Render
+## 🌐 Deployment
 
-1. Connect GitHub repo to Render
-2. **Build Command:** `npm install && npm run build`
-3. **Start Command:** `npm start`
-4. Add environment variables in Render dashboard
-5. Deploy!
+1. Connect this repo to Render
+2. **Build:** `npm install && npm run build`
+3. **Start:** `npm start`
+4. Add environment variables in the Render dashboard
+5. Deploy
 
----
+<br/>
 
-## 📄 License
+## 👤 Author
 
-MIT © [Harsh Mishra](https://github.com/HarshMishra2803)
+**Harsh Mishra** — B.Tech CSE, Babu Banarasi Das University
+[GitHub](https://github.com/HarshMishra2803) · [LinkedIn](https://linkedin.com/in/harshmishra2803cse)
+
+<br/>
+
+<p align="center"><sub>MIT Licensed · © Harsh Mishra</sub></p>
