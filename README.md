@@ -4,6 +4,7 @@
 <p align="center">
   <a href="https://synapseai-backend-ocgv.onrender.com/api/v1/health"><img src="https://img.shields.io/badge/API_Status-Live-10b981?style=flat-square&logo=render&logoColor=white" /></a>
   <a href="https://github.com/HarshMishra2803/synapseai/commits/main"><img src="https://img.shields.io/github/last-commit/HarshMishra2803/synapseai?style=flat-square&color=blue" /></a>
+  <img src="https://img.shields.io/badge/Endpoints-10-informational?style=flat-square" />
   <img src="https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square" />
 </p>
 
@@ -18,49 +19,48 @@
 <p align="center">
   <a href="https://synapseai-front.vercel.app"><b>Live App</b></a> ·
   <a href="https://github.com/HarshMishra2803/synapseai-front"><b>Frontend Repo</b></a> ·
-  <a href="#-api-reference"><b>API Docs</b></a>
+  <a href="#-api-reference"><b>API Docs</b></a> ·
+  <a href="https://synapseai-backend-ocgv.onrender.com/api/v1/health"><b>Health Check</b></a>
 </p>
+
+<br/>
+
+## 📑 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Architecture](#️-architecture)
+- [Tech Stack](#️-tech-stack)
+- [Project Structure](#-project-structure)
+- [API Reference](#-api-reference)
+- [Sample Requests](#-sample-requests)
+- [Data Models](#-data-models)
+- [Error Handling](#-error-handling)
+- [Getting Started](#-getting-started)
+- [Security](#-security)
+- [Deployment](#-deployment-on-render)
+- [Roadmap](#️-roadmap)
+- [Author](#-author)
 
 <br/>
 
 ## ⚡ Overview
 
-SynapseAI is a **Second Brain** SaaS — a single place to save YouTube videos, tweets, articles, documents, and notes, tag them, and get AI-generated summaries on demand. This repo is the **backend**: a production REST API handling auth, content storage, AI summarization, and public brain-sharing.
+SynapseAI is a **Second Brain** SaaS — a single place to save YouTube videos, tweets, articles, documents, and notes, tag them, and get AI-generated summaries on demand. This repo is the **backend**: a production REST API that handles authentication, content storage, AI summarization, and public brain-sharing for the [SynapseAI frontend](https://github.com/HarshMishra2803/synapseai-front).
 
-The frontend (React + TypeScript) lives in a [separate repo](https://github.com/HarshMishra2803/synapseai-front) and talks to this API over HTTPS.
+It's built as a small, focused API — **10 endpoints**, one auth strategy, one database — rather than a sprawling service, so the whole request lifecycle (auth → ownership check → DB → response) stays easy to reason about end to end.
 
 <br/>
 
-## 🧩 Features
+## ✨ Features
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**🔐 JWT Authentication**
-Stateless, token-based sessions — no server-side session storage.
-
-**📝 Full CRUD**
-Create, read, update, delete, and pin content items.
-
-**🤖 AI Summarization**
-Groq (Llama 3.1) primary, with a 3-tier fallback chain: Groq → Gemini → local extraction.
-
-</td>
-<td width="50%" valign="top">
-
-**🔗 Brain Sharing**
-Generate a unique, crypto-based public link to share your whole brain read-only.
-
-**🌍 CORS Allowlisting**
-Environment-variable-driven origin control.
-
-**🏥 Health Endpoint**
-`/api/v1/health` for uptime monitoring.
-
-</td>
-</tr>
-</table>
+- 🔐 **JWT Authentication** — stateless, token-based sessions, no server-side session storage
+- 📝 **Full CRUD** — create, read, update, delete, and pin content items
+- 🤖 **AI Summarization with fallback** — Groq (Llama 3.1) primary, Gemini second, local text extraction as a last resort, so a summary request never just fails
+- 🔗 **Brain Sharing** — generate a unique, crypto-based public link to share your whole brain read-only, revoke it anytime
+- 🌍 **CORS Allowlisting** — origin control driven entirely by an environment variable, no hardcoded domains
+- 🏥 **Health Endpoint** — `/api/v1/health` for uptime monitoring / deployment checks
+- 🛡️ **Ownership Enforcement** — every content route checks both the JWT **and** that the resource actually belongs to the requesting user
 
 <br/>
 
@@ -76,9 +76,18 @@ Express 5 API (this repo)
         │
         └──► AI Fallback Chain
                  1. Groq (Llama 3.1)  ──► fast, primary
-                 2. Google Gemini     ──► fallback on failure
+                 2. Google Gemini     ──► fallback on failure/timeout
                  3. Local extraction  ──► guarantees a response either way
 ```
+
+**Request lifecycle for a protected route:**
+
+```
+Request ──► CORS check ──► JWT verify (middleware.ts) ──► attach userId to req
+        ──► Mongoose query scoped to that userId ──► response
+```
+
+Every protected route re-derives `userId` from the verified token — it's never trusted from the request body — so one user can't read or modify another user's content even if they guess an ID.
 
 <br/>
 
@@ -103,9 +112,11 @@ Express 5 API (this repo)
 src/
 ├── index.ts        # Express app, route definitions, server start
 ├── db.ts            # Mongoose connection + schema/model definitions
-├── middleware.ts    # JWT auth middleware
+├── middleware.ts    # JWT auth middleware (userMiddleware)
 └── config.ts         # Environment variable exports
 ```
+
+Kept intentionally flat — four files, each with one job — since a 10-endpoint API doesn't need a deep folder hierarchy to stay readable.
 
 <br/>
 
@@ -146,6 +157,91 @@ src/
 | Method | Endpoint | Auth | Description |
 |---|---|:---:|---|
 | `GET` | `/api/v1/health` | ❌ | Server health check |
+
+<br/>
+
+## 📮 Sample Requests
+
+<details>
+<summary><b>POST /api/v1/signup</b></summary>
+
+```bash
+curl -X POST https://synapseai-backend-ocgv.onrender.com/api/v1/signup \
+  -H "Content-Type: application/json" \
+  -d '{"username": "harsh", "password": "yourpassword"}'
+```
+
+```json
+{
+  "message": "User created successfully"
+}
+```
+</details>
+
+<details>
+<summary><b>POST /api/v1/signin</b></summary>
+
+```bash
+curl -X POST https://synapseai-backend-ocgv.onrender.com/api/v1/signin \
+  -H "Content-Type: application/json" \
+  -d '{"username": "harsh", "password": "yourpassword"}'
+```
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+</details>
+
+<details>
+<summary><b>POST /api/v1/content</b></summary>
+
+```bash
+curl -X POST https://synapseai-backend-ocgv.onrender.com/api/v1/content \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Great thread on system design",
+    "link": "https://twitter.com/...",
+    "type": "tweet",
+    "tags": ["system-design", "read-later"]
+  }'
+```
+
+```json
+{
+  "message": "Content saved",
+  "content": {
+    "_id": "665f1a...",
+    "title": "Great thread on system design",
+    "type": "tweet",
+    "tags": ["system-design", "read-later"],
+    "pinned": false
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>POST /api/v1/ai/summarize</b></summary>
+
+```bash
+curl -X POST https://synapseai-backend-ocgv.onrender.com/api/v1/ai/summarize \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"contentId": "665f1a..."}'
+```
+
+```json
+{
+  "summary": "A concise, AI-generated summary of the saved content.",
+  "provider": "groq"
+}
+```
+
+`provider` reflects which tier of the fallback chain actually served the request — useful for debugging when Groq is rate-limited and Gemini quietly picks up the request instead.
+</details>
 
 <br/>
 
@@ -200,7 +296,33 @@ src/
 
 <br/>
 
+## ⚠️ Error Handling
+
+The API returns consistent JSON error shapes so the frontend can handle failures predictably:
+
+```json
+{
+  "message": "Invalid credentials"
+}
+```
+
+| Status | Meaning |
+|---|---|
+| `400` | Malformed request body / validation failure |
+| `401` | Missing, invalid, or expired JWT |
+| `403` | Valid JWT, but the resource doesn't belong to this user |
+| `404` | Resource not found |
+| `500` | Unhandled server error (logged server-side) |
+
+<br/>
+
 ## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- MongoDB Atlas account (free tier works)
+
+### Installation
 
 ```bash
 git clone https://github.com/HarshMishra2803/synapseai.git
@@ -212,6 +334,8 @@ cp .env.example .env
 
 npm run dev
 ```
+
+### Environment Variables
 
 | Variable | Required | Description |
 |---|:---:|---|
@@ -244,13 +368,23 @@ npm run dev       # Build + start (local development)
 
 <br/>
 
-## 🌐 Deployment
+## 🌐 Deployment on Render
 
 1. Connect this repo to Render
 2. **Build:** `npm install && npm run build`
 3. **Start:** `npm start`
 4. Add environment variables in the Render dashboard
 5. Deploy
+
+<br/>
+
+## 🗺️ Roadmap
+
+- [ ] bcrypt password hashing
+- [ ] Rate limiting on auth and AI endpoints
+- [ ] Automated tests (Jest + Supertest)
+- [ ] Pagination for `GET /api/v1/content`
+- [ ] Refresh tokens (currently single long-lived JWT)
 
 <br/>
 
